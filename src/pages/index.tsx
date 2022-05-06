@@ -1,5 +1,7 @@
 import { ReactElement, useEffect, useRef, useState } from "react";
 
+import dynamic from "next/dynamic";
+
 import Button from "@/components/molecules/Button";
 import Card from "@/components/molecules/Card";
 import Cell from "@/components/molecules/Cell";
@@ -10,12 +12,22 @@ import QuadTreeNode from "@/core/quadtree/QuadTreeNode";
 import { Meta } from "@/layout/Meta";
 import { Main } from "@/templates/Main";
 
+const Graphviz = dynamic(() => import("graphviz-react"), { ssr: false });
+
 const Index = () => {
   const quadTree = useRef<QuadTree>(null);
   const [cells, setCells] = useState<ReactElement[]>([]);
   const [dummyIndex, setDummyIndex] = useState(0);
   const sizeRef = useRef<HTMLInputElement>(null);
   const insertValue = useRef(0);
+
+  const [graphWidth, setGraphWidth] = useState(500);
+  const [graphHeight, setGraphHeight] = useState(500);
+
+  const graphWidthRef = useRef<HTMLInputElement>(null);
+  const graphHeightRef = useRef<HTMLInputElement>(null);
+
+  const representation = quadTree.current?.getDOTRepresentation();
 
   useEffect(() => {
     if (quadTree.current === null) {
@@ -74,6 +86,7 @@ const Index = () => {
       []
     );
     setCells(cellsArray);
+    quadTree.current.fixNonLeafsNodes();
   }, [dummyIndex, quadTree]);
 
   return (
@@ -86,6 +99,24 @@ const Index = () => {
               <input
                 type="number"
                 ref={sizeRef}
+                className="block bg-light-on-primary border-light-tertiary border-2 rounded-lg p-2"
+              />
+            </div>
+            <div className="flex justify-center items-center">
+              <label className="block mr-4"> Graph Width </label>
+              <input
+                type="number"
+                defaultValue={500}
+                ref={graphWidthRef}
+                className="block bg-light-on-primary border-light-tertiary border-2 rounded-lg p-2"
+              />
+            </div>
+            <div className="flex justify-center items-center">
+              <label className="block mr-4"> Graph Height </label>
+              <input
+                type="number"
+                defaultValue={500}
+                ref={graphHeightRef}
                 className="block bg-light-on-primary border-light-tertiary border-2 rounded-lg p-2"
               />
             </div>
@@ -114,6 +145,15 @@ const Index = () => {
               >
                 Clear
               </Button>
+              <Button
+                type="OUTLINED"
+                onClick={() => {
+                  setGraphHeight(Number(graphHeightRef.current?.value));
+                  setGraphWidth(Number(graphWidthRef.current?.value));
+                }}
+              >
+                Change graph size
+              </Button>
             </div>
           </div>
         </Card>
@@ -123,6 +163,17 @@ const Index = () => {
           <Table gridSize={quadTree.current?.gridSize ?? 8} cells={cells} />
         </Card>
       </div>
+      {representation && (
+        <div className="flex justify-center">
+          <Graphviz
+            dot={representation}
+            options={{
+              height: graphHeight,
+              width: graphWidth,
+            }}
+          />
+        </div>
+      )}
     </Main>
   );
 };

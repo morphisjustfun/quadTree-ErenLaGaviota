@@ -14,6 +14,7 @@
     "prepare": "husky install"
   },
   "dependencies": {
+    "graphviz-react": "^1.2.0",
     "next": "^12.0.7",
     "next-seo": "^4.28.1",
     "react": "^17.0.2",

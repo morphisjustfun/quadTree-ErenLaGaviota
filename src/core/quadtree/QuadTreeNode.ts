@@ -1,7 +1,10 @@
+/* eslint-disable no-plusplus */
 export interface Point {
   x: number;
   y: number;
 }
+
+const directionLabels = ["nw", "ne", "se", "sw"];
 
 class QuadTreeNode {
   public children: (QuadTreeNode | null)[];
@@ -9,6 +12,9 @@ class QuadTreeNode {
   public value: string;
 
   public point: Point;
+
+  // to be used for empty nodes as id
+  public static emptyNodeIndex = 0;
 
   public isLeaf: boolean;
 
@@ -22,12 +28,27 @@ class QuadTreeNode {
     this.isLeaf = isLeaf;
   }
 
-  public isEqual(node: QuadTreeNode): boolean {
-    return (
-      this.point.x === node.point.x &&
-      this.point.y === node.point.y &&
-      this.isLeaf === node.isLeaf
-    );
+  public getDOT(): string {
+    let result = "";
+    if (this.isLeaf) {
+      result += `"${this.value}" [label="${this.value}"];`;
+    } else {
+      result += `"${this.value}" [label=""];`;
+      for (let i = 0; i < 4; i++) {
+        if (this.children[i] !== null) {
+          result += `"${this.value}" -- "${this.children[i]!.value}" [label="${
+            directionLabels[i]
+          }"];`;
+          result += this.children[i]!.getDOT();
+        } else {
+          // if the child doesn't exist then assign it an empty node
+          result += `"${QuadTreeNode.emptyNodeIndex}" [label=""];`;
+          result += `"${this.value}" -- "${QuadTreeNode.emptyNodeIndex}" [label="${directionLabels[i]}"];`;
+        }
+        QuadTreeNode.emptyNodeIndex++;
+      }
+    }
+    return result;
   }
 }
 

@@ -10,20 +10,20 @@ interface ICellProps {
 }
 
 const Cell: FC<ICellProps> = (props) => {
-  const classNameCustom = `${props.leftBorder ? "border-l" : ""} ${
-    props.rightBorder ? "border-r" : ""
-  } ${props.topBorder ? "border-t" : ""} ${
-    props.bottomBorder ? "border-b" : ""
-  } text-center`;
 
   return (
     <div
-      className={classNameCustom}
       onClick={props.onClick}
       style={{
         display: "flex",
         justifyContent: "center",
+        borderLeft: props.leftBorder ? "1px solid #000" : 0,
+        borderRight: props.rightBorder ? "1px solid #000" : 0,
+        borderTop: props.topBorder ? "1px solid #000" : 0,
+        borderBottom: props.bottomBorder ? "1px solid #000" : 0,
+        textAlign: "center",
       }}
+      className="hover:bg-light-outline"
     >
       <div
         style={{
@@ -32,7 +32,6 @@ const Cell: FC<ICellProps> = (props) => {
           display: "flex",
           justifyContent: "center",
         }}
-        className="hover:bg-light-outline"
       >
         {props.value}
       </div>

@@ -3,11 +3,11 @@
 /* eslint-disable no-continue */
 /* eslint-disable @typescript-eslint/no-shadow */
 // QuadTree structure - 2d - size = 2^2n
+
 // Left Upper quadrant = 0
 // Right Upper quadrant = 1
 // Right Lower quadrant = 2
 // Left Lower quadrant = 3
-
 import QuadTreeNode, { Point } from "./QuadTreeNode";
 
 interface Border {
@@ -34,7 +34,9 @@ class QuadTree {
 
   private count: number;
 
-  private getNewCorners(
+  private nonleafsCount = 1;
+
+  private static getNewCorners(
     currentQuadrant: Quadrant,
     leftUpperPoint: Point,
     rightUpperPoint: Point,
@@ -139,15 +141,19 @@ class QuadTree {
     if (gridSize & (gridSize - 1)) {
       throw new Error("Grid size must be a power of 2");
     }
+
     if (gridSize <= 2) {
       throw new Error("Grid size must be greater than 2");
     }
+
     this.gridSize = gridSize;
+
     // initialize grid
     this.grid = Array(gridSize)
       .fill(null)
       .map(() => Array(gridSize).fill(null));
-    // create dummy root node
+
+    // create root node
     this.root = new QuadTreeNode(
       "root",
       {
@@ -156,21 +162,18 @@ class QuadTree {
       },
       false
     );
-    // initialize count
+    // initialize count of nodes
     this.count = 0;
   }
 
   public validNode(node: QuadTreeNode): boolean {
     // check if node is in grid
-    if (
+    return !(
       node.point.x < 0 ||
       node.point.x >= this.gridSize ||
       node.point.y < 0 ||
       node.point.y >= this.gridSize
-    ) {
-      return false;
-    }
-    return true;
+    );
   }
 
   public search(node: QuadTreeNode): boolean {
@@ -185,7 +188,7 @@ class QuadTree {
     _rightLower: Point,
     leftLower: Point
   ): Quadrant {
-    // get quadrant of node
+    // get quadrant of node according to its position and the four corners of the current grid
     if (node.point.x <= (leftUpper.x + rightUpper.x) / 2) {
       if (
         node.point.y >= leftUpper.y &&
@@ -202,7 +205,7 @@ class QuadTree {
   }
 
   public fixNonLeafsNodes() {
-    // use dfs to traverse the tree and fix non-leaf nodes
+    // use dfs to traverse the tree and fix non-leaf nodes (assign a dummy unique value)
     const stack: QuadTreeNode[] = [];
     stack.push(this.root);
     while (stack.length > 0) {
@@ -216,11 +219,9 @@ class QuadTree {
           stack.push(currentNode.children[i]!);
         }
       }
-      currentNode.value = "";
-      currentNode.point = {
-        x: -1,
-        y: -1,
-      };
+      // assign a dummy unique value
+      currentNode.value = `nonleaf-${this.nonleafsCount}`;
+      this.nonleafsCount++;
     }
   }
 
@@ -230,7 +231,7 @@ class QuadTree {
     rightLowerPoint: { x: number; y: number };
     leftLowerPoint: { x: number; y: number };
   } {
-    // initialize corners
+    // initialize corners of the initial grid (main root)
     return {
       leftUpperPoint: {
         x: 0,
@@ -266,11 +267,11 @@ class QuadTree {
       return;
     }
     this.count++;
-
     // update grid
     node.isLeaf = true;
     this.grid[node.point.y]![node.point.x] = node;
 
+    // set tempNode and initialize corners
     let tempNode = this.root;
     let { leftUpperPoint, rightUpperPoint, rightLowerPoint, leftLowerPoint } =
       this.initializeCorners();
@@ -286,20 +287,24 @@ class QuadTree {
 
     // while a node with the same quadrant is not found
     while (tempNode.children[quadrant] !== null) {
+      // update tempNode downwards
       tempNode = tempNode.children[quadrant]!;
 
-      const newCorners = this.getNewCorners(
+      // get new corners
+      const newCorners = QuadTree.getNewCorners(
         quadrant,
         leftUpperPoint,
         rightUpperPoint,
         rightLowerPoint,
         leftLowerPoint
       );
+
       leftUpperPoint = newCorners.leftUpperPoint;
       rightUpperPoint = newCorners.rightUpperPoint;
       rightLowerPoint = newCorners.rightLowerPoint;
       leftLowerPoint = newCorners.leftLowerPoint;
 
+      // get new quadrant
       quadrant = this.getQuadrant(
         node,
         leftUpperPoint,
@@ -309,9 +314,10 @@ class QuadTree {
       );
     }
 
-    // once a node is found check if its a leaf
+    // once a node is found check if it's a leaf
     if (tempNode.isLeaf) {
-      // if its leaf iterate until the quadrants are not the same
+      // if its leaf iterate until the quadrants are not the same creating direction nodes (no value)
+
       let currentQuadrantOld = this.getQuadrant(
         tempNode,
         leftUpperPoint,
@@ -340,11 +346,11 @@ class QuadTree {
         // set the direction node as a leaf
         tempNode.children[currentQuadrantOld] = directionNode;
 
-        // update the temp node to be the direciton node
+        // update the temp node to be the direction node
         tempNode = directionNode;
 
         // calculate new corners
-        const newCorners = this.getNewCorners(
+        const newCorners = QuadTree.getNewCorners(
           currentQuadrantNew,
           leftUpperPoint,
           rightUpperPoint,
@@ -379,58 +385,22 @@ class QuadTree {
         tempNode.value,
         tempNode.point
       );
+
       tempNode.children[currentQuadrantNew] = node;
+
+      // update the node to keep the reference of previous node
       const fixNode = tempNode.children[currentQuadrantOld];
       const { x, y } = fixNode!.point;
-      this.grid[y]![x] = fixNode;
+      this.grid[y]![x] = fixNode as QuadTreeNode;
+
       // update the node leaf status
       tempNode.isLeaf = false;
+
       return;
     }
 
     // if the node is not a leaf then just assign the corresponding quadrant
-    console.log(tempNode === node);
     tempNode.children[quadrant] = node;
-  }
-
-  private findParent(node: QuadTreeNode): {
-    parent: QuadTreeNode;
-    Quadrant: Quadrant;
-  } {
-    // find parent using quadrant of the node
-    let { leftUpperPoint, rightUpperPoint, rightLowerPoint, leftLowerPoint } =
-      this.initializeCorners();
-    let currentQuadrant = this.getQuadrant(
-      node,
-      leftUpperPoint,
-      rightUpperPoint,
-      rightLowerPoint,
-      leftLowerPoint
-    );
-    let tempNode = this.root;
-
-    while (!tempNode.children[currentQuadrant]!.isLeaf) {
-      tempNode = tempNode.children[currentQuadrant]!;
-      const newCorners = this.getNewCorners(
-        currentQuadrant,
-        leftUpperPoint,
-        rightUpperPoint,
-        rightLowerPoint,
-        leftLowerPoint
-      );
-      leftUpperPoint = newCorners.leftUpperPoint;
-      rightUpperPoint = newCorners.rightUpperPoint;
-      rightLowerPoint = newCorners.rightLowerPoint;
-      leftLowerPoint = newCorners.leftLowerPoint;
-      currentQuadrant = this.getQuadrant(
-        node,
-        leftUpperPoint,
-        rightUpperPoint,
-        rightLowerPoint,
-        leftLowerPoint
-      );
-    }
-    return { parent: tempNode, Quadrant: currentQuadrant };
   }
 
   private findParentInternal(node: QuadTreeNode) {
@@ -449,72 +419,15 @@ class QuadTree {
       }
 
       for (let i = 0; i < 4; i++) {
-        // if (currentNode.children[i]?.isEqual(node)) {
         if (currentNode.children[i] === node) {
           return { parent: currentNode, quadrant: i };
         }
       }
-
-      // const values = currentNode.children.filter((nodes, index) =>
-      //   nodes?.isEqual(node)
-      // );
-      //
-      // if (values.length === 1) {
-      //   return { parent: currentNode, quadrant: index };
-      // }
-      //
-      // if (index !== -1) {
-      // }
     }
     throw new Error("Node not found");
   }
 
-  // public delete(pos: { x: number; y: number }): void {
-  // // create dummy node with the same position as the node to be deleted
-  // // const dummyNodeToBeDeleted = new QuadTreeNode("dummy", pos, false);
-  // const dummyNodeToBeDeleted = this.grid[pos.y]![pos.x]!;
-  // dummyNodeToBeDeleted.isLeaf = true;
-  //
-  // if (!this.search(dummyNodeToBeDeleted)) {
-  //   console.log("Node not found");
-  //   return;
-  // }
-  //
-  // // update grid and counter
-  // this.grid[pos.y]![pos.x] = null;
-  // this.count--;
-  //
-  // // check if the tree is empty
-  // if (this.count === 0) {
-  //   this.root.children = new Array(4).fill(null);
-  //   return;
-  // }
-  //
-  // // find the parent of the node to be deleted
-  // const { parent, quadrant } = this.findParentInternal(dummyNodeToBeDeleted);
-  // // check if parent has siblings apart from the node to be deleted
-  // const numberOfSiblings = parent.children.filter(
-  //   (child) => child !== null && !child.isEqual(dummyNodeToBeDeleted)
-  // ).length;
-  //
-  // // if it has siblings then just delete the node to be deleted
-  // if (numberOfSiblings > 1) {
-  //   parent.children[quadrant] = null;
-  //   return;
-  // }
-  // // if it only has one sibling then merge the parent with the sibling and continue upwards
-  // if (numberOfSiblings === 1) {
-  //   if (parent !== this.root) {
-  //     parent.children[quadrant] = null;
-  //     this.deleteInternal(parent, quadrant);
-  //     return;
-  //   }
-  //   parent.children[quadrant] = null;
-  // }
-  // }
-
   public delete(pos: { x: number; y: number }): void {
-    // this.fixNonLeafsNodes();
     // get the node
     const node = this.grid[pos.y]![pos.x]!;
 
@@ -523,7 +436,7 @@ class QuadTree {
 
     // check if parent has siblings apart from the node to be deleted
     const numberOfSiblings = parent.children.filter(
-      (child) => child !== null && !child.isEqual(node)
+      (child) => child !== null && child !== node
     ).length;
 
     // if it has siblings then just delete the node to be deleted
@@ -532,6 +445,8 @@ class QuadTree {
       this.grid[pos.y]![pos.x] = null;
       return;
     }
+
+    // if the parent is the root then just delete the node to be deleted
     if (parent === this.root) {
       parent.children[quadrant] = null;
       this.grid[pos.y]![pos.x] = null;
@@ -540,104 +455,51 @@ class QuadTree {
 
     // only one sibling
     const sibling = parent.children.find(
-      (child) => child !== null && !child.isEqual(node)
+      (child) => child !== null && child !== node
     )!;
 
-    // if the sibling is not leaf then it contains children and cant be merged
+    // if the sibling is not leaf then it contains children and can't be merged
     if (!sibling!.isLeaf) {
       parent.children[quadrant] = null;
       this.grid[pos.y]![pos.x] = null;
       return;
     }
+
     // if the sibling is leaf then merge the parent with the sibling and continue upwards
     let tempNode = parent;
-    let quadrantTemp = -1;
+    let tempQuadrant = -1;
+    // remove
     tempNode.children[quadrant] = null;
 
+    // while the parent is not the root and the parent has only one sibling
+    // namely - stop when the parent has more than one sibling
     while (
       tempNode !== this.root &&
       tempNode.children.filter((child) => child !== null).length === 1
     ) {
+      // find the parent
       const findResult = this.findParentInternal(tempNode);
 
-      quadrantTemp = findResult.quadrant;
+      // assign
+      tempQuadrant = findResult.quadrant;
       const parentTemp = findResult.parent;
 
-      parent.children[quadrantTemp] = null;
+      // remove sibling of the parentTemp
+      parent.children[tempQuadrant] = null;
       tempNode = parentTemp;
     }
-    tempNode.children[quadrantTemp] = sibling;
+    // at the end just assign the sibling to the tempNode
+    tempNode.children[tempQuadrant] = sibling;
+    // remove the node
     this.grid[pos.y]![pos.x] = null;
   }
 
-  private deleteInternal(node: QuadTreeNode, quadrant: Quadrant): void {
-    // delete internal node (which is not a leaf). So we need a find parent internal because no quadrant is passed
-    const remainingSiblingIndex = node.children.findIndex(
-      (child) => child !== null
-    );
-    const remainingSibling = node.children[remainingSiblingIndex];
-
-    if (!remainingSibling!.isLeaf) return;
-
-    node.children = new Array(4).fill(null);
-
-    // delete upwards if there is no child or if its the root
-    while (true) {
-      if (node.children!.some((child) => child !== null)) {
-        break;
-      }
-      if (node === this.root) {
-        break;
-      }
-      const findParentResult = this.findParentInternal(node);
-      // update node and quadrant (of the deleted nodes)
-      // if (findParentResult.parent === this.root) {
-      //   break;
-      // }
-      node = findParentResult.parent;
-      quadrant = findParentResult.quadrant;
-      alert(quadrant);
-      node.children[quadrant] = null;
-    }
-
-    // finally assign the remaining node the remaining sibling and mark it as leaf
-    // remainingSibling!.isLeaf = false;
-    node.children[quadrant] = remainingSibling;
-
-    // if (remainingSibling !== null && !remainingSibling.isLeaf) {
-    //   const leafs = this.findAllLeafs(remainingSibling!);
-    //   node.children = new Array(4).fill(null);
-    //   for (const leaf of leafs) {
-    //     this.grid[leaf.point.y]![leaf.point.x] = null;
-    //     this.insert(leaf);
-    //   }
-    // }
-  }
-
-  private findAllLeafs(node: QuadTreeNode): QuadTreeNode[] {
-    const result = [];
-    const stack: QuadTreeNode[] = [];
-    stack.push(node);
-    while (stack.length > 0) {
-      const currentNode = stack.pop()!;
-      if (currentNode.isLeaf) {
-        result.push(currentNode);
-        continue;
-      }
-      for (let i = 0; i < 4; i++) {
-        if (currentNode.children[i] !== null) {
-          stack.push(currentNode.children[i]!);
-        }
-      }
-    }
-    return result;
-  }
-
   public getBorder(point: Point): Border {
-    // 0,5 is problematic
+    // get the borders of a point using its position in the grid and its corners
     let { leftUpperPoint, rightUpperPoint, rightLowerPoint, leftLowerPoint } =
       this.initializeCorners();
 
+    // lambda function to get the border of a point using corners
     const getIndividualBorder = (point: Point): Border => {
       if (point.x === leftUpperPoint.x) {
         if (point.y === leftUpperPoint.y) {
@@ -713,12 +575,15 @@ class QuadTree {
       };
     };
 
+    // if root is empty then just return the borders of the point using global corners
     if (this.root!.children.every((child) => child === null)) {
       return getIndividualBorder(point);
     }
 
+    // create a dummy node using requested position and dummy info
     const dummyNode = new QuadTreeNode("dummy", point, false);
 
+    // get current quadrant
     let currentQuadrant = this.getQuadrant(
       dummyNode,
       leftUpperPoint,
@@ -727,8 +592,10 @@ class QuadTree {
       leftLowerPoint
     );
 
+    // traverse downwars
     let tempNode = this.root;
 
+    // until temp is null or tempNode is leaf
     while (tempNode !== null && !tempNode.isLeaf) {
       currentQuadrant = this.getQuadrant(
         dummyNode,
@@ -740,7 +607,7 @@ class QuadTree {
 
       tempNode = tempNode.children[currentQuadrant]!;
 
-      const newCorners = this.getNewCorners(
+      const newCorners = QuadTree.getNewCorners(
         currentQuadrant,
         leftUpperPoint,
         rightUpperPoint,
@@ -753,7 +620,7 @@ class QuadTree {
       leftLowerPoint = newCorners.leftLowerPoint;
     }
 
-    // check if four points are the same
+    // check if four points are the same then return all borders true
     if (
       leftUpperPoint.x === rightUpperPoint.x &&
       leftUpperPoint.x === rightLowerPoint.x &&
@@ -771,6 +638,29 @@ class QuadTree {
     }
 
     return getIndividualBorder(point);
+  }
+
+  public getDOTRepresentation(): string {
+    // get the DOT representation for the entire tree
+
+    // if there is no nodes or every children of root are null then return graph with root node (sentinel)
+    if (
+      this.count === 0 ||
+      this.root.children.every((child) => child === null)
+    ) {
+      return `
+graph {
+  "";
+}
+      `;
+    }
+
+    // return the DOT representation of the tree using internal nodes
+    return `
+graph {
+  ${this.root.getDOT()}
+}
+    `;
   }
 }
 

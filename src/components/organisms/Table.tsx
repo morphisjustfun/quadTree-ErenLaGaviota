@@ -9,7 +9,6 @@ const Table: React.FC<ITableProps> = (props) => {
   // cell is a component
   return (
     <div
-      // className={`grid grid-cols-[${props.gridSize}]`}
       style={{
         display: "grid",
         gridTemplateColumns: `repeat(${props.gridSize}, minmax(0, 1fr))`,

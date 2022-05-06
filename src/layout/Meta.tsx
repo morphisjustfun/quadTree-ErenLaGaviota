@@ -26,14 +26,6 @@ const Meta = (props: IMetaProps) => {
         <meta name="HandheldFriendly" content="true" />
         <meta name="MobileOptimized" content="320" />
         <link rel="canonical" href="https://mario-portfolio.vercel.app" />
-        <meta name="twitter:card" content="summary" />
-        <meta name="twitter:site" content="@mario_portfolio" />
-        <meta name="twitter:creator" content="@mario_portfolio" />
-        <meta name="twitter:title" content="Mario Portfolio" />
-        <meta
-          name="twitter:description"
-          content="Hello there! My name is Mario Rios and I am a young Computer Science student who enjoy building software solutions for any kind of needs"
-        />
         <link
           rel="apple-touch-icon"
           href={`${router.basePath}/apple-touch-icon.png`}
