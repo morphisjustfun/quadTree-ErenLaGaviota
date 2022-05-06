@@ -9,7 +9,7 @@
 
 ## Try it out
 
-Just visit the [Project webpage](https://quadtree-demo-eacazrtp9-morphisjustfun.vercel.app/).
+Just visit the [Project webpage](https://quadtree-demo-morphisjustfun.vercel.app/).
 
 ## Running the project
 
