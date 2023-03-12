@@ -44,6 +44,6 @@ npm run dev
 Core documentation about data structure is found in the following files:
 
 ```
-./src/core/quadtree/QuadTree.ts
-./src/core/quadtree/QuadTreeNode.ts
+./src/core/quadtree/QuadTree.ts (main structure)
+./src/core/quadtree/QuadTreeNode.ts (node)
 ```
